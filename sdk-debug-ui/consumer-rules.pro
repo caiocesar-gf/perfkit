@@ -1,0 +1,2 @@
+-keep class com.perfkit.debugui.DebugUiPlugin { *; }
+-keep class com.perfkit.debugui.panel.ViolationPanelActivity { *; }

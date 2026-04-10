@@ -1,0 +1,2 @@
+-keep class com.perfkit.api.** { *; }
+-keepclassmembers enum com.perfkit.api.** { *; }

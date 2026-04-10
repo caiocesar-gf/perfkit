@@ -1,0 +1,32 @@
+# Android / Gradle
+*.iml
+.gradle/
+local.properties
+/build/
+**/build/
+/captures/
+.externalNativeBuild/
+.cxx/
+
+# IntelliJ / Android Studio
+/.idea/caches/
+/.idea/libraries/
+/.idea/modules.xml
+/.idea/workspace.xml
+/.idea/navEditor.xml
+/.idea/assetWizardSettings.xml
+/.idea/.gitignore
+
+# macOS
+.DS_Store
+
+# Kotlin
+*.class
+*.kotlin_module
+
+# Maven local publish artifacts (never commit generated AARs)
+/repo/
+
+# Claude Code (AI assistant artifacts — not project code)
+.claude/
+.github/skills/
