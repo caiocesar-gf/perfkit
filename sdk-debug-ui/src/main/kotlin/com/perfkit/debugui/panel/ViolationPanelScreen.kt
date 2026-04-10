@@ -300,7 +300,7 @@ private fun ViolationDetailScreen(
                         shape = RoundedCornerShape(8.dp),
                     ) {
                         Text(
-                            text = event.stacktrace,
+                            text = event.stacktrace.orEmpty(),
                             modifier = Modifier.padding(12.dp),
                             fontFamily = FontFamily.Monospace,
                             fontSize = 11.sp,

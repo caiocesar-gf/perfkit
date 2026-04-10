@@ -43,11 +43,12 @@ internal class DefaultViolationClassifier(
         v is android.os.strictmode.NetworkViolation ->
             ViolationClassification(ViolationCategory.NETWORK, ViolationSeverity.HIGH)
 
-        v is android.os.strictmode.SlowCallViolation ->
+        // SlowCallViolation / LeakedRegistrationObjectsViolation are not public SDK — match by name
+        v.javaClass.simpleName == "SlowCallViolation" ->
             ViolationClassification(ViolationCategory.SLOW_CALL, ViolationSeverity.MEDIUM)
 
         v is android.os.strictmode.LeakedClosableViolation ||
-        v is android.os.strictmode.LeakedRegistrationObjectsViolation ||
+        v.javaClass.simpleName == "LeakedRegistrationObjectsViolation" ||
         isLeakedSqlLite(v) ->
             ViolationClassification(ViolationCategory.LEAKED_RESOURCE, ViolationSeverity.HIGH)
 

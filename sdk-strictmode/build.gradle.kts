@@ -6,7 +6,7 @@ plugins {
 
 android {
     namespace = "com.perfkit.strictmode"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         minSdk = 24
@@ -31,6 +31,7 @@ android {
 dependencies {
     // Acessa PerfKit.violationSink e os contratos via sdk-core (transitivo: sdk-api)
     implementation(project(":sdk-core"))
+    implementation(libs.androidx.core.ktx) // androidx.annotation for @RequiresApi
 }
 
 publishing {
