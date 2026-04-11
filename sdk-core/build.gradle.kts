@@ -4,6 +4,10 @@ plugins {
     `maven-publish`
 }
 
+val perfkitVersion = properties["PERFKIT_VERSION"] as String
+val perfkitGroup = properties["PERFKIT_GROUP"] as String
+val perfkitGithubUrl = properties["PERFKIT_GITHUB_URL"] as String
+
 android {
     namespace = "com.perfkit.core"
     compileSdk = 36
@@ -40,10 +44,37 @@ dependencies {
 publishing {
     publications {
         create<MavenPublication>("release") {
-            groupId = "com.perfkit"
+            groupId = perfkitGroup
             artifactId = "sdk-core"
-            version = "1.0.0"
+            version = perfkitVersion
             afterEvaluate { from(components["release"]) }
+
+            pom {
+                name.set("PerfKit :: sdk-core")
+                description.set(
+                    "Core infrastructure for PerfKit — event bus, circular buffer, violation " +
+                    "classifier, deduplicator, logger, and the PerfKit singleton entry point."
+                )
+                url.set(perfkitGithubUrl)
+                licenses {
+                    license {
+                        name.set("MIT License")
+                        url.set("$perfkitGithubUrl/blob/main/LICENSE")
+                    }
+                }
+                developers {
+                    developer {
+                        id.set("caiocesar-gf")
+                        name.set("Caio Cesar")
+                        url.set("https://github.com/caiocesar-gf")
+                    }
+                }
+                scm {
+                    connection.set("scm:git:github.com/caiocesar-gf/perfkit.git")
+                    developerConnection.set("scm:git:ssh://github.com/caiocesar-gf/perfkit.git")
+                    url.set("$perfkitGithubUrl/tree/main")
+                }
+            }
         }
     }
 }

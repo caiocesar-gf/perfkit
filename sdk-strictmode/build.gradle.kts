@@ -4,6 +4,10 @@ plugins {
     `maven-publish`
 }
 
+val perfkitVersion = properties["PERFKIT_VERSION"] as String
+val perfkitGroup = properties["PERFKIT_GROUP"] as String
+val perfkitGithubUrl = properties["PERFKIT_GITHUB_URL"] as String
+
 android {
     namespace = "com.perfkit.strictmode"
     compileSdk = 36
@@ -29,18 +33,45 @@ android {
 }
 
 dependencies {
-    // Acessa PerfKit.violationSink e os contratos via sdk-core (transitivo: sdk-api)
+    // Accesses PerfKit.violationSink and contracts via sdk-core (transitive: sdk-api)
     implementation(project(":sdk-core"))
-    implementation(libs.androidx.core.ktx) // androidx.annotation for @RequiresApi
+    implementation(libs.androidx.core.ktx)
 }
 
 publishing {
     publications {
         create<MavenPublication>("release") {
-            groupId = "com.perfkit"
+            groupId = perfkitGroup
             artifactId = "sdk-strictmode"
-            version = "1.0.0"
+            version = perfkitVersion
             afterEvaluate { from(components["release"]) }
+
+            pom {
+                name.set("PerfKit :: sdk-strictmode")
+                description.set(
+                    "StrictMode adapter for PerfKit — installs ThreadPolicy and VmPolicy with " +
+                    "penaltyListener on API 28+ for full programmatic capture, with Logcat fallback on API 24–27."
+                )
+                url.set(perfkitGithubUrl)
+                licenses {
+                    license {
+                        name.set("MIT License")
+                        url.set("$perfkitGithubUrl/blob/main/LICENSE")
+                    }
+                }
+                developers {
+                    developer {
+                        id.set("caiocesar-gf")
+                        name.set("Caio Cesar")
+                        url.set("https://github.com/caiocesar-gf")
+                    }
+                }
+                scm {
+                    connection.set("scm:git:github.com/caiocesar-gf/perfkit.git")
+                    developerConnection.set("scm:git:ssh://github.com/caiocesar-gf/perfkit.git")
+                    url.set("$perfkitGithubUrl/tree/main")
+                }
+            }
         }
     }
 }
