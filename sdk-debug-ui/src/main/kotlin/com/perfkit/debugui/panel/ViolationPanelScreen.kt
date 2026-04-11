@@ -1,5 +1,6 @@
 package com.perfkit.debugui.panel
 
+import android.os.Build
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -91,7 +92,9 @@ internal fun ViolationPanelScreen(viewModel: ViolationPanelViewModel) {
                 .fillMaxSize()
                 .padding(padding),
         ) {
-            // Resumo por categoria
+            SdkStatusBanner()
+
+            // Summary by category
             SummaryRow(summaries = uiState.summaries)
 
             // Filtros por categoria
@@ -342,6 +345,44 @@ private fun EmptyState() {
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
+    }
+}
+
+@Composable
+private fun SdkStatusBanner() {
+    val apiLevel = Build.VERSION.SDK_INT
+    val isFullCapture = apiLevel >= 28
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(Color(0xFF0D0D1A))
+            .padding(horizontal = 16.dp, vertical = 10.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        PanelStatusChip("Monitoring Active", Color(0xFF4CAF50))
+        PanelStatusChip("Debug Only", Color(0xFF2196F3))
+        PanelStatusChip(
+            text = if (isFullCapture) "API $apiLevel · Full Listener" else "API $apiLevel · Logcat",
+            color = if (isFullCapture) Color(0xFF4CAF50) else Color(0xFFFFC107),
+        )
+    }
+}
+
+@Composable
+private fun PanelStatusChip(text: String, color: Color) {
+    Surface(
+        shape = RoundedCornerShape(4.dp),
+        color = color.copy(alpha = 0.2f),
+    ) {
+        Text(
+            text = text,
+            fontSize = 10.sp,
+            fontWeight = FontWeight.Medium,
+            color = color,
+            modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp),
+        )
     }
 }
 

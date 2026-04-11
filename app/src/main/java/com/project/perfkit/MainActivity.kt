@@ -48,27 +48,39 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         setContent {
             MaterialTheme {
-                HomeScreen(
-                    onTriggerDiskRead = ::triggerDiskRead,
-                    onTriggerDiskWrite = ::triggerDiskWrite,
-                    onTriggerSlowCall = ::triggerSlowCall,
-                    onTriggerLeakedResource = ::triggerLeakedResource,
-                    onOpenPanel = { PerfKit.openDebugPanel(this) },
-                )
+                // Root Box keeps the debug FAB always on top, across all screens.
+                Box(modifier = Modifier.fillMaxSize()) {
+                    HomeScreen(
+                        onTriggerDiskRead = ::triggerDiskRead,
+                        onTriggerDiskWrite = ::triggerDiskWrite,
+                        onTriggerSlowCall = ::triggerSlowCall,
+                        onTriggerLeakedResource = ::triggerLeakedResource,
+                        onOpenPanel = { PerfKit.openDebugPanel(this@MainActivity) },
+                    )
+                    DebugFab(
+                        modifier = Modifier
+                            .align(Alignment.BottomEnd)
+                            .padding(16.dp),
+                        onOpenPanel = { PerfKit.openDebugPanel(this@MainActivity) },
+                        onTriggerDiskRead = ::triggerDiskRead,
+                        onTriggerDiskWrite = ::triggerDiskWrite,
+                        onTriggerSlowCall = ::triggerSlowCall,
+                    )
+                }
             }
         }
     }
 
     // ------------------------------------------------------------------
-    // Violation triggers — propositais para demonstração
+    // Violation triggers — intentional for demo purposes
     // ------------------------------------------------------------------
 
-    /** Leitura síncrona na main thread → DiskReadViolation */
+    /** Synchronous read on main thread → DiskReadViolation */
     private fun triggerDiskRead() {
         runCatching { File(filesDir, "perfkit_demo.txt").readText() }
     }
 
-    /** Escrita síncrona na main thread → DiskWriteViolation */
+    /** Synchronous write on main thread → DiskWriteViolation */
     private fun triggerDiskWrite() {
         runCatching {
             File(filesDir, "perfkit_demo.txt")
@@ -77,25 +89,23 @@ class MainActivity : ComponentActivity() {
     }
 
     /**
-     * [StrictMode.noteSlowCall] marca explicitamente uma operação lenta.
-     * Mais confiável para demo do que simular latência real.
-     * → SlowCallViolation
+     * [StrictMode.noteSlowCall] explicitly marks a slow operation.
+     * More reliable for demos than simulating real latency. → SlowCallViolation
      */
     private fun triggerSlowCall() {
         StrictMode.noteSlowCall("perfkit-demo-slow-call")
     }
 
     /**
-     * Cria um [java.io.Closeable] sem fechá-lo.
-     * StrictMode detecta no próximo GC → LeakedClosableViolation.
-     *
-     * Nota: a violação não é imediata — depende do GC.
-     * O log "LeakedResource trigger fired" confirmará que o código rodou.
+     * Creates a [java.io.Closeable] without closing it.
+     * StrictMode detects it on the next GC → LeakedClosableViolation.
+     * The violation is not immediate — it depends on GC timing.
      */
     @Suppress("unused")
     private fun triggerLeakedResource() {
+        @Suppress("UNUSED_VARIABLE")
         val leaking = File(filesDir, "perfkit_demo.txt").inputStream()
-        // Intencionalmente não fechamos — o GC eventualmente detectará
+        // Intentionally not closed — GC will eventually detect it
         android.util.Log.d("PerfKit/Demo", "LeakedResource trigger fired — violation appears after GC")
     }
 }
@@ -149,10 +159,9 @@ private fun HomeScreen(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
 
-            // Trigger buttons
             TriggerButton(
                 label = "Disk Read",
-                description = "Síncrono na main thread",
+                description = "Synchronous on main thread",
                 severity = "MEDIUM",
                 severityColor = Color(0xFFFFC107),
                 onClick = { totalTriggered++; onTriggerDiskRead() },
@@ -160,7 +169,7 @@ private fun HomeScreen(
 
             TriggerButton(
                 label = "Disk Write",
-                description = "Síncrono na main thread",
+                description = "Synchronous on main thread",
                 severity = "MEDIUM",
                 severityColor = Color(0xFFFF9800),
                 onClick = { totalTriggered++; onTriggerDiskWrite() },
@@ -176,7 +185,7 @@ private fun HomeScreen(
 
             TriggerButton(
                 label = "Leaked Resource",
-                description = "Detectado no próximo GC",
+                description = "Detected on next GC",
                 severity = "HIGH",
                 severityColor = Color(0xFFFF5722),
                 onClick = { totalTriggered++; onTriggerLeakedResource() },
@@ -222,10 +231,10 @@ private fun StatusCard(totalTriggered: Int) {
             )
             Spacer(Modifier.width(10.dp))
             Column {
-                Text("SDK ativo", fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
+                Text("SDK Active", fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
                 Text(
-                    if (totalTriggered == 0) "Nenhuma violação disparada ainda"
-                    else "$totalTriggered trigger${if (totalTriggered > 1) "s" else ""} enviado${if (totalTriggered > 1) "s" else ""}",
+                    if (totalTriggered == 0) "No violations triggered yet"
+                    else "$totalTriggered trigger${if (totalTriggered > 1) "s" else ""} sent",
                     fontSize = 12.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

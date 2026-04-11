@@ -162,6 +162,50 @@ The SDK installs the appropriate policy automatically based on the device API le
 
 ---
 
+## Demo Experience
+
+The sample app ships with a persistent **debug FAB** (floating action button) that acts as the main entry point for the PerfKit debug experience. It is visible only in debug builds.
+
+> Screenshot placeholder — run `./gradlew :app:installDebug` and take a screenshot of the FAB on the main screen.
+
+### What the FAB does
+
+| Gesture | Action |
+|---|---|
+| **Tap** | Opens the PerfKit violation panel (`ViolationPanelActivity`) |
+| **Long press** | Opens a quick actions sheet |
+
+### Quick actions sheet
+
+The bottom sheet that appears on long press shows:
+- **SDK status:** Monitoring Active badge, Debug Only badge
+- **API info:** current API level + capture mode (`Full Capture` on API 28+ or `Logcat` on API 24–27)
+- **Quick actions:** Open PerfKit Panel, Trigger Disk Read, Trigger Disk Write, Trigger Slow Call, Clear Captured Events
+
+### Violation panel
+
+The panel (`ViolationPanelActivity`) shows:
+- Status banner: Monitoring Active · Debug Only · API level + capture mode
+- Summary chips: count per category, color-coded by highest severity
+- Category filter row
+- Violation list: severity dot, category, message, timestamp, thread name
+- Tap any violation for full detail with stacktrace
+
+---
+
+## How to Present It
+
+1. Launch the app on a debug build (emulator API 28+ recommended for full capture).
+2. Point to the dark FAB in the bottom-right corner — explain it is always visible and only in debug builds.
+3. Tap a **Trigger** button (Disk Read, Disk Write, Slow Call).
+4. Long press the FAB → show the quick actions sheet with the status info.
+5. Tap **Open PerfKit Panel** → walk through the violation list, status banner, and tap a violation to see the full stacktrace.
+6. Use **Clear Captured Events** to reset for the next demo segment.
+
+**API level note:** on API 28+ emulators/devices, violations are captured programmatically and appear in the panel immediately. On API 24–27, violations are written to Logcat only and will not appear in the panel.
+
+---
+
 ## Running the Sample App
 
 ```bash
