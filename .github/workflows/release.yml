@@ -1,0 +1,100 @@
+name: Release
+
+on:
+  push:
+    branches: [main]
+
+# Serialize: never cancel a release in progress, but queue a second push so
+# two concurrent main pushes cannot both race to create the same tag.
+concurrency:
+  group: release-main
+  cancel-in-progress: false
+
+permissions:
+  contents: write   # create tags and GitHub Releases
+
+jobs:
+  release:
+    name: Tag & release if version is new
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout (full history for tag lookup)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      # ----------------------------------------------------------------
+      # 1. Read the version declared in gradle.properties
+      # ----------------------------------------------------------------
+      - name: Read PERFKIT_VERSION
+        id: version
+        run: |
+          VERSION=$(grep -m1 '^PERFKIT_VERSION=' gradle.properties \
+            | cut -d'=' -f2 \
+            | tr -d '[:space:]')
+          TAG="v${VERSION}"
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "tag=${TAG}"         >> "$GITHUB_OUTPUT"
+          echo "PERFKIT_VERSION=${VERSION}  →  tag=${TAG}"
+
+      # ----------------------------------------------------------------
+      # 2. Check whether the tag already exists on the remote
+      # ----------------------------------------------------------------
+      - name: Check whether ${{ steps.version.outputs.tag }} already exists
+        id: tag_check
+        env:
+          TAG: ${{ steps.version.outputs.tag }}
+        run: |
+          if git ls-remote --tags origin "refs/tags/${TAG}" | grep -q "${TAG}"; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+            echo "Tag ${TAG} already exists — no new release will be created."
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+            echo "Tag ${TAG} not found — proceeding with release."
+          fi
+
+      # ----------------------------------------------------------------
+      # 3–6. Only run when the tag is genuinely new
+      # ----------------------------------------------------------------
+      - name: Set up JDK 17
+        if: steps.tag_check.outputs.exists == 'false'
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: gradle
+
+      - name: Create local.properties
+        if: steps.tag_check.outputs.exists == 'false'
+        run: echo "sdk.dir=$ANDROID_HOME" >> local.properties
+
+      - name: Make gradlew executable
+        if: steps.tag_check.outputs.exists == 'false'
+        run: chmod +x ./gradlew
+
+      - name: Build and verify
+        if: steps.tag_check.outputs.exists == 'false'
+        run: ./gradlew clean assemble
+
+      - name: Create and push git tag
+        if: steps.tag_check.outputs.exists == 'false'
+        env:
+          TAG: ${{ steps.version.outputs.tag }}
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag -a "${TAG}" -m "PerfKit ${TAG}"
+          git push origin "${TAG}"
+
+      - name: Create GitHub Release
+        if: steps.tag_check.outputs.exists == 'false'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ steps.version.outputs.tag }}
+        run: |
+          gh release create "${TAG}" \
+            --title "PerfKit ${TAG}" \
+            --generate-notes \
+            --latest

@@ -1,7 +1,7 @@
 # PerfKit
 
+[![CI](https://github.com/caiocesar-gf/perfkit/actions/workflows/ci.yml/badge.svg)](https://github.com/caiocesar-gf/perfkit/actions/workflows/ci.yml)
 [![JitPack](https://jitpack.io/v/caiocesar-gf/perfkit.svg)](https://jitpack.io/#caiocesar-gf/perfkit)
-[![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)](https://github.com/caiocesar-gf/perfkit/releases)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Min SDK](https://img.shields.io/badge/minSdk-24-orange.svg)](https://developer.android.com/about/versions/nougat)
 
@@ -13,12 +13,12 @@ PerfKit is a modular Android SDK for detecting, processing, and visualizing Stri
 
 - Real-time StrictMode violation capture (ThreadPolicy and VmPolicy)
 - Full programmatic capture via `penaltyListener` on API 28+; Logcat fallback on API 24–27
-- Automatic classification by category (disk, network, leaks, cleartext, etc.) and severity (LOW → CRITICAL)
+- Automatic classification by category (disk, network, leaks, cleartext…) and severity (LOW → CRITICAL)
 - Circular buffer with configurable capacity and deduplication window
-- Persistent notification badge with violation count
+- Persistent notification badge with live violation count
 - Jetpack Compose violation panel for in-app inspection
-- Persistent debug FAB with quick actions (tap to open panel, long press for triggers)
-- Zero impact on release builds — production dependency is a no-op API contract
+- Persistent debug FAB — tap to open panel, long press for quick actions
+- Zero impact on release builds — production dependency is a compile-only no-op surface
 - No dependency injection framework required
 
 ---
@@ -34,25 +34,29 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
-        maven { url = uri("https://jitpack.io") }  // ← add this
+        maven { url = uri("https://jitpack.io") }   // ← add this line
     }
 }
 ```
 
 ### 2. Add dependencies
 
+Replace `TAG` with the latest release tag shown in the JitPack badge above (e.g. `v1.0.1`).
+
 ```kotlin
 // app/build.gradle.kts
 dependencies {
-    // Debug-only — automatically excluded from release builds
-    debugImplementation("com.perfkit:sdk-core:1.0.0")
-    debugImplementation("com.perfkit:sdk-strictmode:1.0.0")
-    debugImplementation("com.perfkit:sdk-debug-ui:1.0.0")
+    debugImplementation("com.github.caiocesar-gf.perfkit:sdk-core:TAG")
+    debugImplementation("com.github.caiocesar-gf.perfkit:sdk-strictmode:TAG")
+    debugImplementation("com.github.caiocesar-gf.perfkit:sdk-debug-ui:TAG")
 
     // Public API contracts — safe for release, keeps calls compilable in shared code
-    releaseImplementation("com.perfkit:sdk-api:1.0.0")
+    releaseImplementation("com.github.caiocesar-gf.perfkit:sdk-api:TAG")
 }
 ```
+
+> **JitPack note:** on first use of a new tag, JitPack builds the artifacts on-demand.
+> The initial request may take 1–3 minutes; subsequent resolves are instant.
 
 <details>
 <summary>Using Version Catalog (libs.versions.toml)</summary>
@@ -60,13 +64,13 @@ dependencies {
 ```toml
 # gradle/libs.versions.toml
 [versions]
-perfkit = "1.0.0"
+perfkit = "v1.0.1"   # use the latest tag from the JitPack badge
 
 [libraries]
-perfkit-api        = { group = "com.perfkit", name = "sdk-api",        version.ref = "perfkit" }
-perfkit-core       = { group = "com.perfkit", name = "sdk-core",       version.ref = "perfkit" }
-perfkit-strictmode = { group = "com.perfkit", name = "sdk-strictmode", version.ref = "perfkit" }
-perfkit-debugui    = { group = "com.perfkit", name = "sdk-debug-ui",   version.ref = "perfkit" }
+perfkit-api        = { group = "com.github.caiocesar-gf.perfkit", name = "sdk-api",        version.ref = "perfkit" }
+perfkit-core       = { group = "com.github.caiocesar-gf.perfkit", name = "sdk-core",       version.ref = "perfkit" }
+perfkit-strictmode = { group = "com.github.caiocesar-gf.perfkit", name = "sdk-strictmode", version.ref = "perfkit" }
+perfkit-debugui    = { group = "com.github.caiocesar-gf.perfkit", name = "sdk-debug-ui",   version.ref = "perfkit" }
 ```
 
 ```kotlin
@@ -84,14 +88,11 @@ dependencies {
 <details>
 <summary>Minimal setup — Logcat only, no debug UI</summary>
 
-If you only need violation detection in Logcat without the in-app panel:
-
 ```kotlin
-// app/build.gradle.kts
 dependencies {
-    debugImplementation("com.perfkit:sdk-core:1.0.0")
-    debugImplementation("com.perfkit:sdk-strictmode:1.0.0")
-    releaseImplementation("com.perfkit:sdk-api:1.0.0")
+    debugImplementation("com.github.caiocesar-gf.perfkit:sdk-core:TAG")
+    debugImplementation("com.github.caiocesar-gf.perfkit:sdk-strictmode:TAG")
+    releaseImplementation("com.github.caiocesar-gf.perfkit:sdk-api:TAG")
 }
 ```
 
@@ -118,13 +119,13 @@ class MyApplication : Application() {
             )
         )
 
-        StrictModePlugin.install(this)   // installs penaltyListener
-        DebugUiPlugin.install(this)      // starts notification badge
+        StrictModePlugin.install(this)   // installs penaltyListener (API 28+) or fallback
+        DebugUiPlugin.install(this)      // activates notification badge
     }
 }
 ```
 
-> **Order matters:** `PerfKit.initialize()` must be called before the other two.
+> **Order matters:** `PerfKit.initialize()` must be called before `StrictModePlugin` and `DebugUiPlugin`.
 
 ### 4. Use the API
 
@@ -137,8 +138,8 @@ PerfKit.clearViolations()
 
 // Observe violations as a Flow
 lifecycleScope.launch {
-    PerfKit.observeViolations().collect { events ->
-        // events: List<ViolationEvent>
+    PerfKit.observeViolations().collect { events: List<ViolationEvent> ->
+        // react to captured violations
     }
 }
 ```
@@ -149,11 +150,11 @@ lifecycleScope.launch {
 
 | Module | Artifact | Description |
 |---|---|---|
-| `:sdk-api` | `com.perfkit:sdk-api:1.0.0` | Public contracts: `ViolationEvent`, `PerfKitConfig`, use case interfaces |
-| `:sdk-core` | `com.perfkit:sdk-core:1.0.0` | Infrastructure: event bus, circular buffer, classifier, deduplicator, `PerfKit` singleton |
-| `:sdk-strictmode` | `com.perfkit:sdk-strictmode:1.0.0` | Android adapter — StrictMode with `penaltyListener` (API 28+) and Logcat fallback (API 24–27) |
-| `:sdk-debug-ui` | `com.perfkit:sdk-debug-ui:1.0.0` | Debug overlay: sticky notification + `ViolationPanelActivity` in Jetpack Compose |
-| `:app` | — | Sample app demonstrating SDK integration |
+| `:sdk-api` | `…:sdk-api:TAG` | Public contracts: `ViolationEvent`, `PerfKitConfig`, use case interfaces |
+| `:sdk-core` | `…:sdk-core:TAG` | Infrastructure: event bus, buffer, classifier, deduplicator, `PerfKit` singleton |
+| `:sdk-strictmode` | `…:sdk-strictmode:TAG` | StrictMode adapter — `penaltyListener` (API 28+), Logcat fallback (API 24–27) |
+| `:sdk-debug-ui` | `…:sdk-debug-ui:TAG` | Compose UI: sticky notification + `ViolationPanelActivity` |
+| `:app` | — | Sample app |
 
 **Dependency graph:**
 
@@ -168,8 +169,8 @@ sdk-api ← sdk-core ← sdk-strictmode
 
 ```kotlin
 PerfKitConfig(
-    enabled: Boolean = true,                              // Master switch
-    debugOnly: Boolean = true,                            // Auto-disable on release builds
+    enabled: Boolean = true,                          // Master switch
+    debugOnly: Boolean = true,                        // Auto-disable on release builds
     strictModeEnabled: Boolean = true,
     debugUiEnabled: Boolean = true,
 
@@ -178,21 +179,17 @@ PerfKitConfig(
     detectDiskWrites: Boolean = true,
     detectNetwork: Boolean = true,
     detectCustomSlowCalls: Boolean = true,
-    detectResourceMismatches: Boolean = false,
 
     // VM policy
     detectLeakedClosableObjects: Boolean = true,
     detectActivityLeaks: Boolean = true,
     detectCleartextNetwork: Boolean = true,
-    detectLeakedRegistrationObjects: Boolean = false,
-    detectFileUriExposure: Boolean = false,
 
     // Processing
-    maxBufferSize: Int = 200,                             // Circular buffer capacity
-    dedupWindowMs: Long = 2_000L,                         // Dedup window in milliseconds
+    maxBufferSize: Int = 200,
+    dedupWindowMs: Long = 2_000L,
     minSeverityToDisplay: ViolationSeverity = ViolationSeverity.MEDIUM,
-
-    logger: ViolationLogger? = null                       // Custom log sink; null = Logcat
+    logger: ViolationLogger? = null
 )
 ```
 
@@ -203,7 +200,7 @@ data class ViolationEvent(
     val id: String,
     val timestamp: Long,
     val source: ViolationSource,       // THREAD_POLICY | VM_POLICY
-    val category: ViolationCategory,   // DISK_READ | DISK_WRITE | NETWORK | SLOW_CALL | LEAKED_RESOURCE | ...
+    val category: ViolationCategory,   // DISK_READ | DISK_WRITE | NETWORK | SLOW_CALL | …
     val severity: ViolationSeverity,   // LOW | MEDIUM | HIGH | CRITICAL
     val threadName: String,
     val message: String,
@@ -213,18 +210,14 @@ data class ViolationEvent(
 )
 ```
 
-**Violation categories:** `DISK_READ`, `DISK_WRITE`, `NETWORK`, `SLOW_CALL`, `LEAKED_RESOURCE`, `RESOURCE_MISMATCH`, `CLEARTEXT_NETWORK`, `UNTAGGED_SOCKET`, `CUSTOM`, `UNKNOWN`
-
 ---
 
-## Android & API Level Support
+## API Level Support
 
-| API Level | Capture Method | Behavior |
+| API Level | Capture Method | Result |
 |---|---|---|
-| API 28+ (Android 9+) | `penaltyListener` on ThreadPolicy and VmPolicy | Full programmatic capture — violations intercepted, classified, displayed in the panel |
-| API 24–27 (Android 7–8.1) | `penaltyLog()` fallback | Violations in Logcat only; panel shows empty state |
-
-The SDK installs the appropriate policy automatically. No configuration change needed.
+| **API 28+** (Android 9+) | `penaltyListener` on ThreadPolicy + VmPolicy | Full capture — classified, buffered, shown in panel |
+| **API 24–27** (Android 7–8.1) | `penaltyLog()` fallback | Violations appear in Logcat only; panel remains empty |
 
 ---
 
@@ -232,41 +225,31 @@ The SDK installs the appropriate policy automatically. No configuration change n
 
 The sample app ships with a persistent **debug FAB** visible only in debug builds.
 
-> Screenshot placeholder — run `./gradlew :app:installDebug` and take screenshots.
-
 ### What the FAB does
 
 | Gesture | Action |
 |---|---|
-| **Tap** | Opens the PerfKit violation panel (`ViolationPanelActivity`) |
-| **Long press** | Opens the quick actions sheet |
+| **Tap** | Opens the violation panel (`ViolationPanelActivity`) |
+| **Long press** | Opens quick actions sheet |
 
 ### Quick actions sheet
 
-- **SDK status:** Monitoring Active · Debug Only · API level + capture mode
-- **Quick triggers:** Disk Read, Disk Write, Slow Call
-- **Clear Captured Events**
+Shows SDK status (Monitoring Active · Debug Only · API level + capture mode) and one-tap triggers: Disk Read, Disk Write, Slow Call, Clear Events.
 
 ### Violation panel
 
-- Status banner: Monitoring Active · Debug Only · API level + capture mode
-- Summary chips: count per category, color-coded by highest severity
-- Category filter row
-- Violation list with severity dot, category, message, timestamp, thread name
-- Tap any item for full detail with expandable stacktrace
+Status banner · Summary chips by category · Filterable list · Tap for full stacktrace detail.
 
 ---
 
-## How to Present It
+## How to Present the Demo
 
-1. Launch the app on API 28+ emulator/device for full capture.
-2. Point to the dark FAB (bottom-right) — debug builds only.
-3. Tap a **Trigger** button (Disk Read, Disk Write, Slow Call).
-4. Long press the FAB → show quick actions and SDK status info.
-5. Open panel → walk through the list, tap a violation to see stacktrace.
-6. **Clear Captured Events** to reset for the next demo segment.
-
-**Note:** on API 24–27, violations appear in Logcat only and the panel stays empty.
+1. Launch on API 28+ emulator for full capture.
+2. Point to the dark FAB (bottom-right corner) — debug builds only.
+3. Tap a trigger button (Disk Read, Disk Write, Slow Call).
+4. Long press the FAB → show quick actions and SDK status.
+5. Open the panel → walk through violations, tap one for stacktrace.
+6. **Clear Captured Events** to reset between demo segments.
 
 ---
 
@@ -285,56 +268,77 @@ The sample app ships with a persistent **debug FAB** visible only in debug build
 
 ---
 
-## Roadmap
+## CI/CD & Releases
 
-| Version | Focus | Highlights |
-|---|---|---|
-| **v1.1** | Reporting | Export violations as JSON, share via Android share sheet, advanced filters |
-| **v1.2** | Startup & rendering | App startup time, frozen frame detection, jank metrics |
-| **v1.3** | Stability heuristics | ANR heuristics, violation sampling for high-frequency apps |
+Every push to `main` and every pull request runs the **CI** workflow (build + unit tests).
+
+When `PERFKIT_VERSION` in `gradle.properties` changes, the **Release** workflow automatically:
+
+1. Detects that the new tag (e.g. `v1.0.1`) does not yet exist
+2. Builds and verifies the project
+3. Creates and pushes the git tag
+4. Creates a GitHub Release with auto-generated notes
+
+If the tag already exists, the workflow exits cleanly with no action.
+
+JitPack then builds the SDK modules from the new tag. Artifacts are available within a few minutes at `https://jitpack.io/#caiocesar-gf/perfkit`.
+
+### Bumping a version
+
+```
+1. Edit gradle.properties  →  PERFKIT_VERSION=X.Y.Z
+2. git commit -m "chore(release): bump version to X.Y.Z"
+3. git push origin main
+```
+
+The release workflow does the rest.
 
 ---
 
-## Contributing
+## Local Development & Publishing
 
-### Build locally
+Clone and build:
 
 ```bash
-# Clone and build
 git clone https://github.com/caiocesar-gf/perfkit.git
 cd perfkit
 ./gradlew clean assemble
-
-# Publish all SDK modules to Maven Local for local testing
-./gradlew publishToMavenLocal
 ```
 
-In the consuming project:
+Publish all SDK modules to Maven Local (useful for testing in another local project):
+
+```bash
+./gradlew :sdk-api:publishToMavenLocal \
+          :sdk-core:publishToMavenLocal \
+          :sdk-strictmode:publishToMavenLocal \
+          :sdk-debug-ui:publishToMavenLocal
+```
+
+Add to the consuming project's `settings.gradle.kts`:
 
 ```kotlin
-// settings.gradle.kts — add mavenLocal() before google() and mavenCentral()
 repositories {
-    mavenLocal()
+    mavenLocal()    // must come before google() and mavenCentral()
     google()
     mavenCentral()
 }
 ```
 
-### Releasing a new version
+Then use:
 
-1. Update `PERFKIT_VERSION` in `gradle.properties`
-2. Update `CHANGELOG.md`
-3. Commit: `git commit -m "chore(release): bump version to X.Y.Z"`
-4. Tag: `git tag vX.Y.Z && git push origin main && git push origin vX.Y.Z`
-5. JitPack builds automatically on tag push — artifacts available within minutes at `https://jitpack.io/#caiocesar-gf/perfkit`
+```kotlin
+debugImplementation("com.github.caiocesar-gf.perfkit:sdk-core:1.0.0")
+```
 
-### Module boundary rules
+---
 
-- `sdk-api` must have no Android imports.
-- `sdk-core` must not depend on `sdk-strictmode` or `sdk-debug-ui`.
-- App-specific demo concerns must stay in `:app`.
+## Roadmap
 
-Commit messages follow Conventional Commits: `<type>(<scope>): <summary>`
+| Version | Focus |
+|---|---|
+| **v1.1** | JSON export, share sheet, advanced panel filters |
+| **v1.2** | Startup time, frozen frame detection, jank metrics |
+| **v1.3** | ANR heuristics, violation sampling |
 
 ---
 
@@ -352,4 +356,4 @@ Commit messages follow Conventional Commits: `<type>(<scope>): <summary>`
 
 ## License
 
-PerfKit is distributed under the [MIT License](LICENSE).
+[MIT License](LICENSE)

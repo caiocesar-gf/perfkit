@@ -2,12 +2,13 @@ jdk:
   - openjdk17
 
 before_install:
-  # JitPack environments don't ship local.properties — create it from the env variable
+  # JitPack environments do not ship local.properties.
   - echo sdk.dir=$ANDROID_HOME > local.properties
 
 build:
-  # Publish only the SDK modules — skip the :app module (application, not library)
+  # Publish all four SDK library modules in a single Gradle invocation.
+  # The :app module is an application, not a library — skip it.
   - ./gradlew :sdk-api:publishReleasePublicationToMavenLocal
-  - ./gradlew :sdk-core:publishReleasePublicationToMavenLocal
-  - ./gradlew :sdk-strictmode:publishReleasePublicationToMavenLocal
-  - ./gradlew :sdk-debug-ui:publishReleasePublicationToMavenLocal
+      :sdk-core:publishReleasePublicationToMavenLocal
+      :sdk-strictmode:publishReleasePublicationToMavenLocal
+      :sdk-debug-ui:publishReleasePublicationToMavenLocal

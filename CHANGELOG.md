@@ -1,7 +1,30 @@
 # Changelog
 
 All notable changes to PerfKit will be documented in this file.
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
+Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) · Versioning: [Semantic Versioning](https://semver.org/).
+
+---
+
+## [Unreleased]
+
+<!-- Move items here as you work, then promote them to a versioned section on release. -->
+
+---
+
+## [1.0.1] — pending
+
+### Changed
+- Publishing groupId corrected to `com.github.caiocesar-gf.perfkit` for native JitPack compatibility
+- Version centralised in `gradle.properties` (`PERFKIT_VERSION`); all modules read from it automatically
+- Full POM metadata added to all SDK modules: name, description, url, license, developers, scm
+
+### Added
+- GitHub Actions CI workflow — runs on pull requests and pushes to `main`
+- GitHub Actions Release workflow — creates git tag + GitHub Release when `PERFKIT_VERSION` changes; skips if tag already exists
+- `jitpack.yml` — configures JDK 17 and publishes all SDK modules in a single Gradle invocation
+- Debug FAB in sample app — persistent bottom-end button (debug builds only); tap opens violation panel, long press opens quick actions sheet
+- `SdkStatusBanner` in `ViolationPanelActivity` — shows Monitoring Active, Debug Only, API level, and capture mode
+- `CLAUDE.md` — codebase guidance for Claude Code sessions
 
 ---
 
@@ -11,40 +34,25 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 #### Core SDK (`:sdk-core`)
 - `PerfKit` singleton with `initialize()`, `openDebugPanel()`, and `clearViolations()` entry points
-- `PerfKitConfig` data class with full configuration surface: per-violation-type toggles, buffer size, dedup window, minimum severity threshold, and custom logger injection
-- In-memory circular buffer for `ViolationEvent` storage, configurable via `maxBufferSize`
-- Event bus for distributing captured violations to registered consumers
-- Violation deduplicator with configurable time window (`dedupWindowMs`) to suppress repeated identical violations
-- Violation classifier that maps raw StrictMode policy labels to typed `ViolationCategory` and `ViolationSeverity` values
-- `ViolationLogger` interface for plugging in custom log sinks
+- `PerfKitConfig` data class with full configuration surface
+- In-memory circular buffer, event bus, violation deduplicator, and classifier
 
-#### Public API contracts (`:sdk-api`)
-- `ViolationEvent` — immutable data class carrying id, timestamp, source, category, severity, thread name, message, stacktrace, class name, and policy label
-- `ViolationSource` enum: `THREAD_POLICY`, `VM_POLICY`
-- `ViolationCategory` enum: `DISK_READ`, `DISK_WRITE`, `NETWORK`, `SLOW_CALL`, `LEAKED_RESOURCE`, `RESOURCE_MISMATCH`, `CLEARTEXT_NETWORK`, `UNTAGGED_SOCKET`, `CUSTOM`, `UNKNOWN`
-- `ViolationSeverity` enum: `LOW`, `MEDIUM`, `HIGH`, `CRITICAL`
-- `PerfKitConfig` contract with default values that are safe for production references
-- Use case and domain service interfaces decoupling `:sdk-core` from upper layers
+#### Public API (`:sdk-api`)
+- `ViolationEvent`, `ViolationSource`, `ViolationCategory`, `ViolationSeverity`
+- `PerfKitConfig` contract
+- Use case and domain service interfaces
 
 #### StrictMode adapter (`:sdk-strictmode`)
-- `StrictModePlugin.install()` — installs ThreadPolicy and VmPolicy based on `PerfKitConfig` flags
-- Full programmatic violation capture via `penaltyListener` on API 28+ (Android 9 and above)
-- Automatic fallback to `penaltyLog()` on API 24–27 (Android 7–8.1), surfacing violations in Logcat
-- Per-policy detection toggles: disk reads, disk writes, network on main thread, slow calls, leaked closable objects, activity leaks, cleartext network traffic, untagged sockets
+- `StrictModePlugin.install()` — `penaltyListener` on API 28+, `penaltyLog()` fallback on API 24–27
 
 #### Debug UI (`:sdk-debug-ui`)
-- `DebugUiPlugin.install()` — registers a lifecycle observer that activates the debug overlay
-- Persistent notification badge displaying the current violation count, updated in real time
-- `ViolationPanelActivity` built entirely in Jetpack Compose — scrollable list of `ViolationEvent` entries with category, severity, thread name, timestamp, and expandable stacktrace
-- `PerfKit.openDebugPanel(context)` convenience method to launch the panel from anywhere
+- `DebugUiPlugin.install()` — persistent notification badge with live count
+- `ViolationPanelActivity` in Jetpack Compose
 
 #### Sample app (`:app`)
-- Demonstrative application showing correct SDK initialization in `Application.onCreate()`
-- Manual violation triggers for each major category (disk, network, slow call) to validate capture and display
-- Example of opening the debug panel from a button press
+- Demo initialization, violation triggers, panel launch
 
 ### Notes
-
-- The SDK enforces `debugOnly = true` by default. When `BuildConfig.DEBUG` is `false`, all plugins are no-ops and no StrictMode policy is applied.
-- No dependency injection framework is required or assumed. The SDK is DI-agnostic.
-- Minimum supported API level is 24. Full capture is available from API 28.
+- `debugOnly = true` by default — all plugins are no-ops in release builds
+- DI-agnostic — no Hilt, Koin, or similar required
+- Min SDK 24; full programmatic capture from API 28
