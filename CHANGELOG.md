@@ -11,6 +11,18 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) · Versioning: 
 
 ---
 
+## [1.0.2] — 2026-04-12
+
+### Added
+- Aggregator POM at root level (`com.github.caiocesar-gf:perfkit:TAG`) — consumers now install with a single `debugImplementation` line instead of four separate module dependencies
+- `jitpack.yml` updated to publish the root aggregator alongside the four SDK modules
+
+### Changed
+- README Quick Start simplified to single-dependency install story; individual module coordinates moved to "Advanced" collapsible section
+- Local development `publishToMavenLocal` now publishes all artifacts (aggregator + modules) in one command
+
+---
+
 ## [1.0.1] — 2026-04-11
 
 ### Changed

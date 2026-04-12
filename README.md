@@ -39,21 +39,18 @@ dependencyResolutionManagement {
 }
 ```
 
-### 2. Add dependencies
+### 2. Add the dependency
 
-Replace `TAG` with the latest release tag shown in the JitPack badge above (e.g. `v1.0.1`).
+Replace `TAG` with the latest release tag shown in the JitPack badge above (e.g. `v1.0.2`).
 
 ```kotlin
 // app/build.gradle.kts
 dependencies {
-    debugImplementation("com.github.caiocesar-gf.perfkit:sdk-core:TAG")
-    debugImplementation("com.github.caiocesar-gf.perfkit:sdk-strictmode:TAG")
-    debugImplementation("com.github.caiocesar-gf.perfkit:sdk-debug-ui:TAG")
-
-    // Public API contracts — safe for release, keeps calls compilable in shared code
-    releaseImplementation("com.github.caiocesar-gf.perfkit:sdk-api:TAG")
+    debugImplementation("com.github.caiocesar-gf:perfkit:TAG")
 }
 ```
+
+That's it. One line pulls in the full SDK — StrictMode capture, circular buffer, and the Compose debug panel.
 
 > **JitPack note:** on first use of a new tag, JitPack builds the artifacts on-demand.
 > The initial request may take 1–3 minutes; subsequent resolves are instant.
@@ -64,34 +61,33 @@ dependencies {
 ```toml
 # gradle/libs.versions.toml
 [versions]
-perfkit = "v1.0.1"   # use the latest tag from the JitPack badge
+perfkit = "v1.0.2"   # use the latest tag from the JitPack badge
 
 [libraries]
-perfkit-api        = { group = "com.github.caiocesar-gf.perfkit", name = "sdk-api",        version.ref = "perfkit" }
-perfkit-core       = { group = "com.github.caiocesar-gf.perfkit", name = "sdk-core",       version.ref = "perfkit" }
-perfkit-strictmode = { group = "com.github.caiocesar-gf.perfkit", name = "sdk-strictmode", version.ref = "perfkit" }
-perfkit-debugui    = { group = "com.github.caiocesar-gf.perfkit", name = "sdk-debug-ui",   version.ref = "perfkit" }
+perfkit = { group = "com.github.caiocesar-gf", name = "perfkit", version.ref = "perfkit" }
 ```
 
 ```kotlin
 // app/build.gradle.kts
 dependencies {
-    debugImplementation(libs.perfkit.core)
-    debugImplementation(libs.perfkit.strictmode)
-    debugImplementation(libs.perfkit.debugui)
-    releaseImplementation(libs.perfkit.api)
+    debugImplementation(libs.perfkit)
 }
 ```
 
 </details>
 
 <details>
-<summary>Minimal setup — Logcat only, no debug UI</summary>
+<summary>Advanced — individual modules</summary>
+
+For consumers who want finer control over which modules are included:
 
 ```kotlin
 dependencies {
     debugImplementation("com.github.caiocesar-gf.perfkit:sdk-core:TAG")
     debugImplementation("com.github.caiocesar-gf.perfkit:sdk-strictmode:TAG")
+    debugImplementation("com.github.caiocesar-gf.perfkit:sdk-debug-ui:TAG")
+
+    // Public API contracts — keeps PerfKit calls compilable in shared code on release
     releaseImplementation("com.github.caiocesar-gf.perfkit:sdk-api:TAG")
 }
 ```
@@ -148,13 +144,17 @@ lifecycleScope.launch {
 
 ## Module Structure
 
-| Module | Artifact | Description |
-|---|---|---|
-| `:sdk-api` | `…:sdk-api:TAG` | Public contracts: `ViolationEvent`, `PerfKitConfig`, use case interfaces |
-| `:sdk-core` | `…:sdk-core:TAG` | Infrastructure: event bus, buffer, classifier, deduplicator, `PerfKit` singleton |
-| `:sdk-strictmode` | `…:sdk-strictmode:TAG` | StrictMode adapter — `penaltyListener` (API 28+), Logcat fallback (API 24–27) |
-| `:sdk-debug-ui` | `…:sdk-debug-ui:TAG` | Compose UI: sticky notification + `ViolationPanelActivity` |
-| `:app` | — | Sample app |
+PerfKit is internally modular, but externally simple to adopt. The recommended install path is one dependency that pulls in all four modules.
+
+| Artifact | Description |
+|---|---|
+| `com.github.caiocesar-gf:perfkit:TAG` | **Recommended** — aggregator that pulls in all four SDK modules |
+| `…:sdk-api:TAG` | Public contracts: `ViolationEvent`, `PerfKitConfig`, use case interfaces |
+| `…:sdk-core:TAG` | Infrastructure: event bus, buffer, classifier, deduplicator, `PerfKit` singleton |
+| `…:sdk-strictmode:TAG` | StrictMode adapter — `penaltyListener` (API 28+), Logcat fallback (API 24–27) |
+| `…:sdk-debug-ui:TAG` | Compose UI: sticky notification + `ViolationPanelActivity` |
+
+> The `…` prefix stands for `com.github.caiocesar-gf.perfkit` for the individual modules.
 
 **Dependency graph:**
 
@@ -305,13 +305,10 @@ cd perfkit
 ./gradlew clean assemble
 ```
 
-Publish all SDK modules to Maven Local (useful for testing in another local project):
+Publish all artifacts to Maven Local (useful for testing in another local project):
 
 ```bash
-./gradlew :sdk-api:publishToMavenLocal \
-          :sdk-core:publishToMavenLocal \
-          :sdk-strictmode:publishToMavenLocal \
-          :sdk-debug-ui:publishToMavenLocal
+./gradlew publishToMavenLocal
 ```
 
 Add to the consuming project's `settings.gradle.kts`:
@@ -327,7 +324,7 @@ repositories {
 Then use:
 
 ```kotlin
-debugImplementation("com.github.caiocesar-gf.perfkit:sdk-core:1.0.0")
+debugImplementation("com.github.caiocesar-gf:perfkit:1.0.2")
 ```
 
 ---

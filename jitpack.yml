@@ -6,9 +6,10 @@ before_install:
   - echo sdk.dir=$ANDROID_HOME > local.properties
 
 build:
-  # Publish all four SDK library modules in a single Gradle invocation.
-  # The :app module is an application, not a library — skip it.
-  - ./gradlew :sdk-api:publishReleasePublicationToMavenLocal
+  # Publish the root aggregator POM first (consumers use com.github.caiocesar-gf:perfkit:TAG),
+  # then publish all four SDK library modules for advanced/modular usage.
+  - ./gradlew publishPerfkitPublicationToMavenLocal
+      :sdk-api:publishReleasePublicationToMavenLocal
       :sdk-core:publishReleasePublicationToMavenLocal
       :sdk-strictmode:publishReleasePublicationToMavenLocal
       :sdk-debug-ui:publishReleasePublicationToMavenLocal
