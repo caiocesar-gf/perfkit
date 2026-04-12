@@ -142,27 +142,6 @@ lifecycleScope.launch {
 
 ---
 
-## Module Structure
-
-PerfKit is internally modular, but externally simple to adopt. The recommended install path is one dependency that pulls in all four modules.
-
-| Artifact | Description |
-|---|---|
-| `com.github.caiocesar-gf:perfkit:TAG` | **Recommended** — aggregator that pulls in all four SDK modules |
-| `…:sdk-api:TAG` | Public contracts: `ViolationEvent`, `PerfKitConfig`, use case interfaces |
-| `…:sdk-core:TAG` | Infrastructure: event bus, buffer, classifier, deduplicator, `PerfKit` singleton |
-| `…:sdk-strictmode:TAG` | StrictMode adapter — `penaltyListener` (API 28+), Logcat fallback (API 24–27) |
-| `…:sdk-debug-ui:TAG` | Compose UI: sticky notification + `ViolationPanelActivity` |
-
-> The `…` prefix stands for `com.github.caiocesar-gf.perfkit` for the individual modules.
-
-**Dependency graph:**
-
-```
-sdk-api ← sdk-core ← sdk-strictmode
-                   ← sdk-debug-ui
-```
-
 ---
 
 ## Configuration Reference
@@ -220,36 +199,6 @@ data class ViolationEvent(
 | **API 24–27** (Android 7–8.1) | `penaltyLog()` fallback | Violations appear in Logcat only; panel remains empty |
 
 ---
-
-## Demo Experience
-
-The sample app ships with a persistent **debug FAB** visible only in debug builds.
-
-### What the FAB does
-
-| Gesture | Action |
-|---|---|
-| **Tap** | Opens the violation panel (`ViolationPanelActivity`) |
-| **Long press** | Opens quick actions sheet |
-
-### Quick actions sheet
-
-Shows SDK status (Monitoring Active · Debug Only · API level + capture mode) and one-tap triggers: Disk Read, Disk Write, Slow Call, Clear Events.
-
-### Violation panel
-
-Status banner · Summary chips by category · Filterable list · Tap for full stacktrace detail.
-
----
-
-## How to Present the Demo
-
-1. Launch on API 28+ emulator for full capture.
-2. Point to the dark FAB (bottom-right corner) — debug builds only.
-3. Tap a trigger button (Disk Read, Disk Write, Slow Call).
-4. Long press the FAB → show quick actions and SDK status.
-5. Open the panel → walk through violations, tap one for stacktrace.
-6. **Clear Captured Events** to reset between demo segments.
 
 ---
 

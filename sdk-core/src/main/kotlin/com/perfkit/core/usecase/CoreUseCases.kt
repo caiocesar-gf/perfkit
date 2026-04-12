@@ -17,16 +17,6 @@ import kotlinx.coroutines.flow.channelFlow
 import kotlinx.coroutines.flow.map
 import java.util.UUID
 
-// ---------------------------------------------------------------------------
-// ProcessViolation
-// ---------------------------------------------------------------------------
-
-/**
- * Orquestra o pipeline completo ao receber uma [RawViolation]:
- * classifica → filtra → deduplica → armazena → loga → emite no bus.
- *
- * Thread-safe: chamado pelo executor do penaltyListener (background thread).
- */
 internal class ProcessViolationUseCase(
     private val classifier: ViolationClassifier,
     private val deduplicator: ViolationDeduplicator,
@@ -39,7 +29,6 @@ internal class ProcessViolationUseCase(
     override fun invoke(rawViolation: RawViolation) {
         val classification = classifier.classify(rawViolation)
 
-        // RF-06 — filtro por categoria
         if (!config.isCategoryEnabled(classification.category)) return
 
         val event = ViolationEvent(
@@ -55,21 +44,16 @@ internal class ProcessViolationUseCase(
             policyLabel = rawViolation.source.label,
         )
 
-        // RF-09 — deduplicação / throttle
         if (!deduplicator.shouldEmit(event)) return
 
-        // RF-08 — buffer em memória
         buffer.add(event)
-        // RF-03 — log customizado
         logger.log(event)
-        // emite para observers (UI, BubbleNotifier, etc.)
         eventBus.emit(event)
     }
 
     private fun formatStacktrace(t: Throwable): String? {
         val frames = t.stackTrace
             .filterNot { frame ->
-                // Remove frames internos do StrictMode para focar no código do app
                 frame.className.startsWith("android.os.StrictMode") ||
                 frame.className.startsWith("android.os.strictmode") ||
                 frame.className.startsWith("java.lang.reflect.")
@@ -81,41 +65,19 @@ internal class ProcessViolationUseCase(
     }
 }
 
-// ---------------------------------------------------------------------------
-// ObserveViolations
-// ---------------------------------------------------------------------------
-
-/**
- * Retorna um [Flow] reativo de snapshots do buffer.
- *
- * - Primeira emissão: snapshot atual (RF-08).
- * - Emissões subsequentes: snapshot atualizado a cada nova violação.
- *
- * Usar [channelFlow] para garantir emissão segura no coletor.
- */
 internal class ObserveViolationsUseCase(
     private val eventBus: ViolationEventBus,
     private val buffer: ViolationBuffer,
 ) : ObserveViolations {
 
     override fun invoke(): Flow<List<ViolationEvent>> = channelFlow {
-        // snapshot inicial
         send(buffer.getAll())
-        // snapshot atualizado a cada nova violação
         eventBus.events.collect { _ ->
             send(buffer.getAll())
         }
     }
 }
 
-// ---------------------------------------------------------------------------
-// ObserveViolationSummaries
-// ---------------------------------------------------------------------------
-
-/**
- * Agrega violações por categoria, derivado de [ObserveViolations].
- * Ordena por severidade decrescente para destacar os problemas mais críticos.
- */
 internal class ObserveViolationSummariesUseCase(
     private val observeViolations: ObserveViolations,
 ) : ObserveViolationSummaries {

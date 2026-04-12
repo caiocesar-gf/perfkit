@@ -5,34 +5,11 @@ import android.content.pm.ApplicationInfo
 import com.perfkit.core.PerfKit
 import com.perfkit.strictmode.adapter.StrictModeAdapter
 
-/**
- * Plugin de StrictMode para o PerfKit SDK.
- *
- * Instala listeners de violação no [android.os.StrictMode] e encaminha
- * os eventos para o pipeline central via [PerfKit.violationSink].
- *
- * ### Pré-requisito
- * [PerfKit.initialize] deve ser chamado **antes** de [install].
- *
- * ### Uso mínimo
- * ```kotlin
- * // Application.onCreate()
- * PerfKit.initialize(this, PerfKitConfig())
- * StrictModePlugin.install(this)          // usa a config do PerfKit
- * ```
- */
 object StrictModePlugin {
 
     @Volatile
     private var installed = false
 
-    /**
-     * Instala os listeners de StrictMode usando a [PerfKit.config] ativa.
-     *
-     * Idempotente: múltiplas chamadas são ignoradas após a primeira.
-     *
-     * @param context Usado para checar se o build é debuggable. Não é retido.
-     */
     @JvmStatic
     fun install(context: Context) {
         if (installed) return
@@ -45,7 +22,6 @@ object StrictModePlugin {
         installed = true
     }
 
-    /** Reseta o estado — use APENAS em testes. */
     @JvmStatic
     fun reset() {
         installed = false

@@ -9,25 +9,11 @@ import com.perfkit.strictmode.mapper.ViolationMapper
 import java.util.concurrent.Executor
 import java.util.concurrent.Executors
 
-/**
- * Adapter que integra [StrictMode] com o pipeline de domínio do PerfKit.
- *
- * ## Estratégia (API 28+)
- * 1. **Preserva política existente** via `Builder(existingPolicy)` — não sobrescreve
- *    detecções já configuradas pelo desenvolvedor.
- * 2. **Adiciona só o necessário** — cada detection flag é aplicado conforme [PerfKitConfig].
- * 3. **Executor isolado** — listener roda em thread daemon de prioridade mínima;
- *    nunca bloqueia a thread que causou a violação.
- * 4. **penaltyLog() mantido** — violações aparecem no Logcat independentemente do SDK.
- *
- * ## Fallback (API 24–27)
- * `penaltyListener` não disponível. Aplica políticas de detecção + `penaltyLog()`.
- * Violações ficam visíveis no Logcat mas não são capturadas programaticamente.
- */
 internal class StrictModeAdapter(
     private val config: PerfKitConfig,
     private val sink: ProcessViolation,
 ) {
+    // Dedicated daemon thread so the listener never blocks the violating thread.
     private val executor: Executor = Executors.newSingleThreadExecutor { r ->
         Thread(r, "perfkit-strictmode-listener").also {
             it.priority = Thread.MIN_PRIORITY
@@ -82,6 +68,7 @@ internal class StrictModeAdapter(
         StrictMode.setVmPolicy(builder.build())
     }
 
+    // API 24–27: penaltyListener not available; violations are Logcat-only.
     private fun installLegacy() {
         val threadBuilder = StrictMode.ThreadPolicy.Builder(StrictMode.getThreadPolicy())
         if (config.detectDiskReads) threadBuilder.detectDiskReads()
@@ -100,7 +87,7 @@ internal class StrictModeAdapter(
 
         android.util.Log.i(
             "PerfKit/StrictMode",
-            "penaltyListener requires API 28+. Violations are Logcat-only on this device (API ${Build.VERSION.SDK_INT}).",
+            "penaltyListener requires API 28+. Violations are Logcat-only on API ${Build.VERSION.SDK_INT}.",
         )
     }
 }

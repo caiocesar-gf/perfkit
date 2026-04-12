@@ -8,7 +8,6 @@
         <activity
             android:name="com.perfkit.debugui.panel.ViolationPanelActivity"
             android:exported="false"
-            android:theme="@style/Theme.AppCompat.DayNight.NoActionBar"
             android:launchMode="singleTop" />
     </application>
 

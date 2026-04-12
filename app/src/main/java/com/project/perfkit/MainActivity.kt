@@ -48,7 +48,6 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         setContent {
             MaterialTheme {
-                // Root Box keeps the debug FAB always on top, across all screens.
                 Box(modifier = Modifier.fillMaxSize()) {
                     HomeScreen(
                         onTriggerDiskRead = ::triggerDiskRead,
@@ -71,16 +70,10 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    // ------------------------------------------------------------------
-    // Violation triggers — intentional for demo purposes
-    // ------------------------------------------------------------------
-
-    /** Synchronous read on main thread → DiskReadViolation */
     private fun triggerDiskRead() {
         runCatching { File(filesDir, "perfkit_demo.txt").readText() }
     }
 
-    /** Synchronous write on main thread → DiskWriteViolation */
     private fun triggerDiskWrite() {
         runCatching {
             File(filesDir, "perfkit_demo.txt")
@@ -88,31 +81,17 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    /**
-     * [StrictMode.noteSlowCall] explicitly marks a slow operation.
-     * More reliable for demos than simulating real latency. → SlowCallViolation
-     */
     private fun triggerSlowCall() {
         StrictMode.noteSlowCall("perfkit-demo-slow-call")
     }
 
-    /**
-     * Creates a [java.io.Closeable] without closing it.
-     * StrictMode detects it on the next GC → LeakedClosableViolation.
-     * The violation is not immediate — it depends on GC timing.
-     */
     @Suppress("unused")
     private fun triggerLeakedResource() {
         @Suppress("UNUSED_VARIABLE")
         val leaking = File(filesDir, "perfkit_demo.txt").inputStream()
-        // Intentionally not closed — GC will eventually detect it
-        android.util.Log.d("PerfKit/Demo", "LeakedResource trigger fired — violation appears after GC")
+        // Intentionally not closed — StrictMode detects it on next GC
     }
 }
-
-// ------------------------------------------------------------------
-// Composables
-// ------------------------------------------------------------------
 
 @Composable
 private fun HomeScreen(

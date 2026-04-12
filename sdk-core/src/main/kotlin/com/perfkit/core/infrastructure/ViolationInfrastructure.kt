@@ -9,10 +9,6 @@ import com.perfkit.api.service.ViolationFormatter
 import com.perfkit.api.service.ViolationLogger
 import java.util.concurrent.ConcurrentHashMap
 
-// ---------------------------------------------------------------------------
-// ViolationFormatter
-// ---------------------------------------------------------------------------
-
 internal class DefaultViolationFormatter : ViolationFormatter {
     override fun format(event: ViolationEvent): String = buildString {
         append("[${event.severity}][${event.category}] ")
@@ -21,10 +17,6 @@ internal class DefaultViolationFormatter : ViolationFormatter {
         event.stacktrace?.let { append("\n").append(it) }
     }
 }
-
-// ---------------------------------------------------------------------------
-// ViolationLogger — wraps Android Log; tag segmentado por categoria
-// ---------------------------------------------------------------------------
 
 internal class AndroidViolationLogger(
     private val formatter: ViolationFormatter = DefaultViolationFormatter(),
@@ -41,10 +33,6 @@ internal class AndroidViolationLogger(
         }
     }
 }
-
-// ---------------------------------------------------------------------------
-// ViolationBuffer — buffer circular thread-safe
-// ---------------------------------------------------------------------------
 
 internal class CircularViolationBuffer(private val maxSize: Int) : ViolationBuffer {
 
@@ -63,17 +51,6 @@ internal class CircularViolationBuffer(private val maxSize: Int) : ViolationBuff
     override fun clear() = buffer.clear()
 }
 
-// ---------------------------------------------------------------------------
-// ViolationDeduplicator — throttling por assinatura de stacktrace
-// ---------------------------------------------------------------------------
-
-/**
- * Deduplicador baseado em janela de tempo.
- *
- * A chave de deduplicação combina [ViolationEvent.category] +
- * [ViolationEvent.className] + os primeiros 200 chars do stacktrace.
- * Isso garante que a mesma violação no mesmo local não inunde o stream.
- */
 internal class ThrottledViolationDeduplicator(
     private val dedupWindowMs: Long,
 ) : ViolationDeduplicator {
@@ -81,25 +58,18 @@ internal class ThrottledViolationDeduplicator(
     private val seen = ConcurrentHashMap<String, Long>(64)
 
     override fun shouldEmit(event: ViolationEvent): Boolean {
-        val key = buildKey(event)
+        val key = "${event.category}|${event.className}|${event.stacktrace?.take(200)}"
         val now = System.currentTimeMillis()
         val lastSeen = seen[key]
 
         return if (lastSeen == null || (now - lastSeen) > dedupWindowMs) {
             seen[key] = now
-            evictIfNeeded(now)
+            if (seen.size > 500) {
+                seen.entries.removeIf { (_, time) -> now - time > dedupWindowMs * 2 }
+            }
             true
         } else {
             false
-        }
-    }
-
-    private fun buildKey(event: ViolationEvent): String =
-        "${event.category}|${event.className}|${event.stacktrace?.take(200)}"
-
-    private fun evictIfNeeded(now: Long) {
-        if (seen.size > 500) {
-            seen.entries.removeIf { (_, time) -> now - time > dedupWindowMs * 2 }
         }
     }
 }

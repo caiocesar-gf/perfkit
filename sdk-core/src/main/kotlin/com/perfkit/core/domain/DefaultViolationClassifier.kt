@@ -9,17 +9,6 @@ import com.perfkit.api.domain.ViolationSeverity
 import com.perfkit.api.service.ViolationClassification
 import com.perfkit.api.service.ViolationClassifier
 
-/**
- * Implementação padrão do classificador de violações.
- *
- * Mapeia subtipos de [android.os.strictmode.Violation] (API 28+) para
- * [ViolationCategory] e [ViolationSeverity] de domínio.
- *
- * Para API < 28, usa string-matching no nome simplificado da classe — sem
- * reflection agressiva, sem dependência em classes ausentes no runtime.
- *
- * @param sdkVersion Injetável para testes unitários sem framework Android.
- */
 internal class DefaultViolationClassifier(
     private val sdkVersion: Int = Build.VERSION.SDK_INT,
 ) : ViolationClassifier {
@@ -43,7 +32,7 @@ internal class DefaultViolationClassifier(
         v is android.os.strictmode.NetworkViolation ->
             ViolationClassification(ViolationCategory.NETWORK, ViolationSeverity.HIGH)
 
-        // SlowCallViolation / LeakedRegistrationObjectsViolation are not public SDK — match by name
+        // SlowCallViolation and LeakedRegistrationObjectsViolation are not public SDK types
         v.javaClass.simpleName == "SlowCallViolation" ->
             ViolationClassification(ViolationCategory.SLOW_CALL, ViolationSeverity.MEDIUM)
 
@@ -75,12 +64,6 @@ internal class DefaultViolationClassifier(
     private fun isCustomViolation(v: Throwable): Boolean =
         v is android.os.strictmode.CustomViolation
 
-    /**
-     * Fallback para API 24–27 via string-matching no simpleName.
-     *
-     * `internal` e `@VisibleForTesting` para permitir testes unitários
-     * puros sem dependência do framework Android.
-     */
     @VisibleForTesting
     internal fun classifyByClassName(simpleName: String): ViolationClassification = when {
         simpleName.contains("DiskRead", ignoreCase = true) ->
