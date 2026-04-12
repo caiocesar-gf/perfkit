@@ -11,7 +11,7 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) · Versioning: 
 
 ---
 
-## [1.0.1] — pending
+## [1.0.1] — 2026-04-11
 
 ### Changed
 - Publishing groupId corrected to `com.github.caiocesar-gf.perfkit` for native JitPack compatibility
